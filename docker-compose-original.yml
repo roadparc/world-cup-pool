@@ -1,10 +1,11 @@
 services:
   app:
-    image: ghcr.io/roadparc/world-cup-pool:latest
+    build: .
     container_name: fhun_tips
+    image: wm-pickems:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:${HTTP_PORT:-8090}:8090"
+      - "${HTTP_PORT:-8090}:8090"
     env_file:
       - .env
     environment:
