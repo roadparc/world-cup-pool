@@ -15,7 +15,7 @@ jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
       packages: write
     steps:
       - name: Checkout
@@ -55,3 +55,47 @@ jobs:
             CREATED=${{ fromJSON(steps.meta.outputs.json).labels['org.opencontainers.image.created'] }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Create GitHub release
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const { owner, repo } = context.repo;
+            const body = [
+              '## Changelog',
+              '',
+              '- Publishes the Docker image to GitHub Container Registry.',
+              '- Allows VPS deployments to pull a prebuilt image instead of building locally.',
+              '- Keeps runtime configuration in the VPS .env file.'
+            ].join('\n');
+
+            try {
+              const existing = await github.rest.repos.getReleaseByTag({
+                owner,
+                repo,
+                tag
+              });
+
+              await github.rest.repos.updateRelease({
+                owner,
+                repo,
+                release_id: existing.data.id,
+                name: tag,
+                body,
+                draft: false,
+                prerelease: false
+              });
+            } catch (error) {
+              if (error.status !== 404) throw error;
+
+              await github.rest.repos.createRelease({
+                owner,
+                repo,
+                tag_name: tag,
+                name: tag,
+                body,
+                draft: false,
+                prerelease: false
+              });
+            }
